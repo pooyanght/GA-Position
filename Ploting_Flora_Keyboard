@@ -1,0 +1,101 @@
+import csv
+from re import X
+import matplotlib.pyplot as plt
+from datetime import datetime
+
+ex_key=r'D:\IRE GA position\flora\tests\2\for code\keypresses.csv'
+ex_serial=r'D:\IRE GA position\flora\tests\2\for code\serialreader.csv'
+
+#ex_key
+key_time=[]
+key_press=[]
+
+#ex_serial
+ard_time=[]
+pressure=[]
+
+with open(ex_key, 'r') as file:
+    csv_reader=csv.reader(file)
+
+    # Skip the header row
+    next(csv_reader)
+
+    for row in csv_reader:
+        time_str=row[0]       
+        if time_str:
+            t_obj=datetime.strptime(time_str, '%H:%M:%S.%f')
+            key_time.append(t_obj)
+
+        try:
+            key_press.append(float(row[1]))
+        except ValueError:
+            continue
+
+with open(ex_serial, 'r') as file:
+    csv_reader=csv.reader(file)
+
+    # Skip the header row
+    next(csv_reader)
+
+    for row in csv_reader:
+        time_str2=row[0]   
+        if time_str2:
+            t_obj2=datetime.strptime(time_str2, '%H:%M:%S.%f')
+            ard_time.append(t_obj2)
+        try:
+            pressure.append(float(row[1]))
+        except ValueError:
+            continue
+
+        '''
+t1 = None
+t2 = None
+
+for i in range(0, len(key_time), 2):
+    for j in range(len(ard_time)):
+        if j >= i:
+            t1 == j
+for k in range(len(key_time), 2):
+    for l in range(len(ard_time)):
+        if l <= k:
+            t2 == l
+            
+        '''
+
+key_press1 = [int(val) for val in key_press]
+key_press2 = [str(val) for val in key_press1]
+
+num_plots= ((len(key_time)/2)+1)
+num_plots = int(num_plots)
+
+fig, axs = plt.subplots(num_plots, 1, figsize=(16, 4*num_plots))
+
+t1 = None
+t2 = None
+
+for i, j in zip(range(0, len(key_time), 2),range(1, len(key_time), 2)):
+    t1 = None
+    t2 = None
+    for k in range(len(ard_time)):
+        if ard_time[k] >= key_time[i]:
+            t1 = k-1 #1 data before pressing keyboard
+            break
+    for l in range(len(ard_time)):
+        if ard_time[l] <= key_time[j]:
+            t2 = l+1 #1 data after pressing keyboard
+
+    axs[int((j+1)//2)].plot(ard_time[t1:t2+1],pressure[t1:t2+1])
+    axs[int((j+1)//2)].set_ylabel('key:'+key_press2[i])
+
+    axs[int((j+1)//2)].axvline(x=key_time[i], linestyle='--', color='r')
+    axs[int((j+1)//2)].axvline(x=key_time[j], linestyle='--', color='r')
+
+plt.tight_layout()
+plt.show()
+    
+
+
+"""  
+plt.plot(ard_time, pressure)
+plt.show()
+    """
