@@ -1,0 +1,77 @@
+import serial
+import csv
+import datetime
+from pynput import keyboard
+import threading
+
+def SerialReader(stop_event):
+    ser = serial.Serial(port="COM12", baudrate=9600)
+    arduino_data = []
+    all_data = []
+
+    while not stop_event.is_set():
+        if ser.in_waiting:
+            arduino_data = ser.readline().decode().strip("\r\n")
+            time = datetime.datetime.now().strftime("%H:%M:%S.%f")
+
+            data_parts = arduino_data.split(',')
+
+            timestep = data_parts[0]
+            voltage = data_parts[1]
+
+            all_data = [time, timestep, voltage]
+            print(all_data)
+            Save_csv(all_data)
+
+def Save_csv(data_in):
+    with open("serialreader.csv", 'a', newline='') as f: #a is used for append to make sure each row would be add to the file and not overwrite
+        writer = csv.writer(f)
+        #writer.writerow(["Exact Time", "Timestep", "Voltage"])
+        writer.writerow(data_in)
+
+def record_keypress(stop_event):
+    keypresses = []
+
+    def on_key_down(key):
+        timestamp = datetime.datetime.now().strftime("%H:%M:%S.%f")
+        key = str(key)
+        keypresses.append((timestamp, key, 'down'))
+
+    def on_key_up(key):
+        timestamp = datetime.datetime.now().strftime("%H:%M:%S.%f")
+        key = str(key)
+        keypresses.append((timestamp, key, 'up'))
+
+    def save_data():
+        csv_file = "keypresses.csv"
+        with open(csv_file, 'w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(["Timestamp", "Key", "Event"])
+            writer.writerows(keypresses)
+
+    listener = keyboard.Listener(on_press=on_key_down, on_release=on_key_up)
+    listener.start()
+
+    stop_event.wait()
+
+    listener.stop()
+
+    save_data()
+
+if __name__ == '__main__':
+    stop_event = threading.Event()
+
+    serial_thread = threading.Thread(target=SerialReader, args=(stop_event,))
+    serial_thread.start()
+
+    keypress_thread = threading.Thread(target=record_keypress, args=(stop_event,))
+    keypress_thread.start()
+
+    input("Press Enter to stop recording...\n")
+
+    stop_event.set()
+
+    serial_thread.join()
+    keypress_thread.join()
+
+    print("Recording stopped.")
